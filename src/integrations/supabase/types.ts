@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      countries: {
+        Row: {
+          code: string
+          color: string
+          created_at: string
+          days_spent: number
+          flag: string
+          id: string
+          legal_limit: number
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          color?: string
+          created_at?: string
+          days_spent?: number
+          flag: string
+          id?: string
+          legal_limit?: number
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          color?: string
+          created_at?: string
+          days_spent?: number
+          flag?: string
+          id?: string
+          legal_limit?: number
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      income_sources: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          month: string | null
+          name: string
+          source_type: string
+          updated_at: string
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          month?: string | null
+          name: string
+          source_type?: string
+          updated_at?: string
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          month?: string | null
+          name?: string
+          source_type?: string
+          updated_at?: string
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
