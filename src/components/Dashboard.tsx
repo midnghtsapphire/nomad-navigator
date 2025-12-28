@@ -4,6 +4,7 @@ import IncomeOverview from "./IncomeOverview";
 import ResidencyTracker from "./ResidencyTracker";
 import TaxEstimator from "./TaxEstimator";
 import DashboardSummary from "./DashboardSummary";
+import DocumentStorage from "./DocumentStorage";
 
 const Dashboard = () => {
   return (
@@ -72,6 +73,11 @@ const Dashboard = () => {
         {/* Tax Estimator */}
         <div className="mt-6">
           <TaxEstimator />
+        </div>
+
+        {/* Document Storage */}
+        <div className="mt-6">
+          <DocumentStorage />
         </div>
       </div>
     </section>
