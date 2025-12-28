@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { MapPin, Calendar, AlertTriangle, Plus, Trash2, Loader2, Pencil, X, Check } from "lucide-react";
+import { MapPin, Calendar, AlertTriangle, Plus, Trash2, Loader2, Pencil, X, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import TravelDates from "./TravelDates";
 
 interface Country {
   id: string;
@@ -22,6 +23,7 @@ const ResidencyTracker = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", code: "", flag: "", days_spent: 0, legal_limit: 183 });
   const [newCountry, setNewCountry] = useState({
     name: "",
@@ -94,8 +96,16 @@ const ResidencyTracker = () => {
     if (error) {
       toast.error("Failed to update");
     } else {
-      fetchCountries();
+      setCountries(prev => prev.map(c => c.id === id ? { ...c, days_spent: Math.max(0, days) } : c));
     }
+  };
+
+  const handleTravelDaysUpdate = (countryId: string, totalDays: number) => {
+    updateDays(countryId, totalDays);
+  };
+
+  const toggleExpand = (countryId: string) => {
+    setExpandedCountry(prev => prev === countryId ? null : countryId);
   };
 
   const deleteCountry = async (id: string) => {
@@ -303,6 +313,18 @@ const ResidencyTracker = () => {
                   <>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleExpand(country.id)}
+                          className="h-6 w-6 p-0"
+                        >
+                          {expandedCountry === country.id ? (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </Button>
                         <span className="text-xl">{country.flag}</span>
                         <span className="font-medium text-foreground">{country.name}</span>
                         {isWarning && (
@@ -311,14 +333,7 @@ const ResidencyTracker = () => {
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          value={country.days_spent}
-                          onChange={(e) => updateDays(country.id, parseInt(e.target.value) || 0)}
-                          className="w-16 h-7 text-center p-1"
-                          min={0}
-                          max={365}
-                        />
+                        <span className="font-medium">{country.days_spent}</span>
                         <span className="text-muted-foreground">/ {country.legal_limit} days</span>
                         <Button
                           variant="ghost"
@@ -350,6 +365,13 @@ const ResidencyTracker = () => {
                         }}
                       />
                     </div>
+                    {expandedCountry === country.id && (
+                      <TravelDates
+                        countryId={country.id}
+                        countryName={country.name}
+                        onDaysUpdate={(days) => handleTravelDaysUpdate(country.id, days)}
+                      />
+                    )}
                   </>
                 )}
               </div>
