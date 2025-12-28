@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MapPin, Calendar, AlertTriangle, Plus, Trash2, Loader2 } from "lucide-react";
+import { MapPin, Calendar, AlertTriangle, Plus, Trash2, Loader2, Pencil, X, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ const ResidencyTracker = () => {
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", code: "", flag: "", days_spent: 0, legal_limit: 183 });
   const [newCountry, setNewCountry] = useState({
     name: "",
     code: "",
@@ -102,6 +104,48 @@ const ResidencyTracker = () => {
       toast.error("Failed to delete");
     } else {
       toast.success("Country removed");
+      fetchCountries();
+    }
+  };
+
+  const startEditing = (country: Country) => {
+    setEditingId(country.id);
+    setEditForm({
+      name: country.name,
+      code: country.code,
+      flag: country.flag,
+      days_spent: country.days_spent,
+      legal_limit: country.legal_limit,
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditForm({ name: "", code: "", flag: "", days_spent: 0, legal_limit: 183 });
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editForm.name.trim()) {
+      toast.error("Please fill in the country name");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("countries")
+      .update({
+        name: editForm.name.trim(),
+        code: editForm.code.trim().toUpperCase(),
+        flag: editForm.flag.trim(),
+        days_spent: editForm.days_spent,
+        legal_limit: editForm.legal_limit,
+      })
+      .eq("id", editingId);
+
+    if (error) {
+      toast.error("Failed to update country");
+    } else {
+      toast.success("Country updated");
+      setEditingId(null);
       fetchCountries();
     }
   };
@@ -203,47 +247,111 @@ const ResidencyTracker = () => {
 
             return (
               <div key={country.id} className="space-y-2 group">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{country.flag}</span>
-                    <span className="font-medium text-foreground">{country.name}</span>
-                    {isWarning && (
-                      <AlertTriangle className="w-4 h-4 text-accent animate-pulse" />
-                    )}
+                {editingId === country.id ? (
+                  <div className="p-3 rounded-xl bg-secondary/50 space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        placeholder="Country name"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="h-8 text-sm"
+                        maxLength={50}
+                      />
+                      <Input
+                        placeholder="Code"
+                        value={editForm.code}
+                        onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                        className="h-8 text-sm"
+                        maxLength={3}
+                      />
+                      <Input
+                        placeholder="Flag"
+                        value={editForm.flag}
+                        onChange={(e) => setEditForm({ ...editForm, flag: e.target.value })}
+                        className="h-8 text-sm"
+                        maxLength={4}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Days"
+                        value={editForm.days_spent}
+                        onChange={(e) => setEditForm({ ...editForm, days_spent: parseInt(e.target.value) || 0 })}
+                        className="h-8 text-sm flex-1"
+                        min={0}
+                        max={365}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Limit"
+                        value={editForm.legal_limit}
+                        onChange={(e) => setEditForm({ ...editForm, legal_limit: parseInt(e.target.value) || 183 })}
+                        className="h-8 text-sm flex-1"
+                        min={1}
+                        max={365}
+                      />
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={saveEdit}>
+                        <Check className="w-4 h-4 text-primary" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEditing}>
+                        <X className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="number"
-                      value={country.days_spent}
-                      onChange={(e) => updateDays(country.id, parseInt(e.target.value) || 0)}
-                      className="w-16 h-7 text-center p-1"
-                      min={0}
-                      max={365}
-                    />
-                    <span className="text-muted-foreground">/ {country.legal_limit} days</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteCountry(country.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-1000 ease-out"
-                    style={{
-                      width: `${Math.min(percentage, 100)}%`,
-                      background: isWarning
-                        ? "linear-gradient(90deg, hsl(38, 92%, 50%), hsl(0, 84%, 60%))"
-                        : `linear-gradient(90deg, ${country.color}, ${country.color}80)`,
-                      animationDelay: `${index * 100}ms`
-                    }}
-                  />
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{country.flag}</span>
+                        <span className="font-medium text-foreground">{country.name}</span>
+                        {isWarning && (
+                          <AlertTriangle className="w-4 h-4 text-accent animate-pulse" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          value={country.days_spent}
+                          onChange={(e) => updateDays(country.id, parseInt(e.target.value) || 0)}
+                          className="w-16 h-7 text-center p-1"
+                          min={0}
+                          max={365}
+                        />
+                        <span className="text-muted-foreground">/ {country.legal_limit} days</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEditing(country)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 p-0"
+                        >
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteCountry(country.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: `${Math.min(percentage, 100)}%`,
+                          background: isWarning
+                            ? "linear-gradient(90deg, hsl(38, 92%, 50%), hsl(0, 84%, 60%))"
+                            : `linear-gradient(90deg, ${country.color}, ${country.color}80)`,
+                          animationDelay: `${index * 100}ms`
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}

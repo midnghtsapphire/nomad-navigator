@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, DollarSign, Euro, PoundSterling, Plus, Trash2 } from "lucide-react";
+import { TrendingUp, DollarSign, Euro, PoundSterling, Plus, Trash2, Pencil, X, Check } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +47,8 @@ const IncomeOverview = () => {
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", amount: "", currency: "USD", month: "", source_type: "salary" });
   const [newIncome, setNewIncome] = useState({
     name: "",
     amount: "",
@@ -54,7 +56,6 @@ const IncomeOverview = () => {
     month: "",
     source_type: "salary",
   });
-
   useEffect(() => {
     if (user) {
       fetchIncomeSources();
@@ -114,6 +115,49 @@ const IncomeOverview = () => {
       fetchIncomeSources();
     } catch (error: any) {
       toast.error("Failed to delete income source");
+    }
+  };
+
+  const startEditing = (source: IncomeSource) => {
+    setEditingId(source.id);
+    setEditForm({
+      name: source.name,
+      amount: String(source.amount),
+      currency: source.currency,
+      month: source.month || "",
+      source_type: source.source_type,
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditForm({ name: "", amount: "", currency: "USD", month: "", source_type: "salary" });
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editForm.name || !editForm.amount) {
+      toast.error("Please fill in name and amount");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("income_sources")
+        .update({
+          name: editForm.name,
+          amount: parseFloat(editForm.amount),
+          currency: editForm.currency,
+          month: editForm.month || null,
+          source_type: editForm.source_type,
+        })
+        .eq("id", editingId);
+
+      if (error) throw error;
+      toast.success("Income source updated");
+      setEditingId(null);
+      fetchIncomeSources();
+    } catch (error: any) {
+      toast.error("Failed to update income source");
     }
   };
 
@@ -250,21 +294,70 @@ const IncomeOverview = () => {
       </div>
 
       {incomeSources.length > 0 && (
-        <div className="mb-6 space-y-2 max-h-32 overflow-y-auto">
+        <div className="mb-6 space-y-2 max-h-40 overflow-y-auto">
           {incomeSources.slice(0, 5).map((source) => (
-            <div key={source.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{source.name}</span>
-                <span className="text-xs text-muted-foreground">{source.month || "N/A"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm" style={{ color: currencyConfig[source.currency as keyof typeof currencyConfig]?.color }}>
-                  {currencyConfig[source.currency as keyof typeof currencyConfig]?.symbol}{Number(source.amount).toLocaleString()}
-                </span>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => deleteIncomeSource(source.id)}>
-                  <Trash2 className="w-3 h-3 text-destructive" />
-                </Button>
-              </div>
+            <div key={source.id} className="p-2 rounded-lg bg-secondary/30">
+              {editingId === source.id ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Name"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={editForm.amount}
+                      onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select value={editForm.currency} onValueChange={(v) => setEditForm({ ...editForm, currency: v })}>
+                      <SelectTrigger className="h-8 text-sm flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={editForm.month} onValueChange={(v) => setEditForm({ ...editForm, month: v })}>
+                      <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="Month" /></SelectTrigger>
+                      <SelectContent>
+                        {months.map((m) => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={saveEdit}>
+                      <Check className="w-4 h-4 text-primary" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEditing}>
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{source.name}</span>
+                    <span className="text-xs text-muted-foreground">{source.month || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm" style={{ color: currencyConfig[source.currency as keyof typeof currencyConfig]?.color }}>
+                      {currencyConfig[source.currency as keyof typeof currencyConfig]?.symbol}{Number(source.amount).toLocaleString()}
+                    </span>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEditing(source)}>
+                      <Pencil className="w-3 h-3 text-muted-foreground" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => deleteIncomeSource(source.id)}>
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
