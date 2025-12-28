@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { seedSampleData } from '@/lib/seedSampleData';
 
 interface AuthContextType {
   user: User | null;
@@ -21,10 +22,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Seed sample data for new users
+        if (event === 'SIGNED_IN' && session?.user) {
+          const { data: existingCountries } = await supabase
+            .from('countries')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .limit(1);
+
+          if (!existingCountries || existingCountries.length === 0) {
+            await seedSampleData(session.user.id);
+          }
+        }
       }
     );
 
