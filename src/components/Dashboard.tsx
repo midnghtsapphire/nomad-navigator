@@ -1,8 +1,9 @@
-import { Wallet, Calendar, FileText, Users, TrendingUp, Globe } from "lucide-react";
+import { Wallet, Calendar, FileText, Globe } from "lucide-react";
 import StatCard from "./StatCard";
 import IncomeOverview from "./IncomeOverview";
 import ResidencyTracker from "./ResidencyTracker";
 import TaxEstimator from "./TaxEstimator";
+import DashboardSummary from "./DashboardSummary";
 
 const Dashboard = () => {
   return (
@@ -22,6 +23,9 @@ const Dashboard = () => {
             Real-time insights into your global finances. Track, analyze, and optimize your tax situation across borders.
           </p>
         </div>
+
+        {/* Dashboard Summary */}
+        <DashboardSummary />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
