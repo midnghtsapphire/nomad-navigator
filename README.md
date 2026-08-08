@@ -1,88 +1,107 @@
-# Welcome to your Lovable project
+# Nomad Navigator
 
+**Digital nomad tax clarity** — track multi-currency income, residency days, and simplified tax scenarios so location-independent professionals can see trade-offs before they move.
 
-<!-- AUTO-PACKAGE-BADGES:START -->
+> Educational estimates only. This app is **not** tax, legal, or financial advice. Always verify with a qualified professional and current local law.
 
-<!-- AUTO-PACKAGE-BADGES:END -->
-## Project info
+## Live Deployment
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+- **Production:** https://nomad-navigator.vercel.app
 
-## How can I edit this code?
+## What it does
 
-There are several ways of editing your application.
+| Area | Capability |
+| --- | --- |
+| Income | Multi-currency income sources (Supabase-backed) |
+| Residency | Country day counters vs legal limits (default 183-day style thresholds) |
+| Tax scenarios | Simplified regime comparisons vs a progressive US federal estimate |
+| Auth | Email/password via Supabase Auth |
 
-**Use Lovable**
+## Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- Vite + React 18 + TypeScript
+- Tailwind CSS + shadcn/ui
+- TanStack Query
+- Supabase (Auth + Postgres)
+- Vitest for pure-logic unit tests
 
-Changes made via Lovable will be committed automatically to this repo.
+## Quick start
 
-**Use your preferred IDE**
+```bash
+# 1. Clone
+git clone https://github.com/midnghtsapphire/nomad-navigator.git
+cd nomad-navigator
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+# 2. Install
+npm install
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# 3. Configure env (copy example, fill with your Supabase anon keys)
+cp .env.example .env
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Develop
 npm run dev
+
+# 5. Quality gates
+npm test
+npm run lint
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+Dev server defaults to port **8080** (`vite.config.ts`).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Environment variables
 
-**Use GitHub Codespaces**
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL` | yes | Project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | yes | **Anon/public** key only |
+| `VITE_SUPABASE_PROJECT_ID` | optional | Convenience id for tooling |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Never commit `.env`. Service-role keys must not ship in the browser bundle.
 
-## What technologies are used for this project?
+## Scripts
 
-This project is built with:
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest unit tests |
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Review jury (CI)
 
-## How can I deploy this project?
+This repo wires the standard MIDNGHTSAPPHIRE review workflows:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- `ai-pr-review-openrouter.yml` — OpenRouter PR diff review
+- `jules-pr-reviewer.yml` — Jules PR review (skips cleanly without `JULES_API_KEY`)
+- `semgrep.yml` — Semgrep SAST + secret packs
+- `codeql.yml` — CodeQL for JavaScript/TypeScript + Actions
+- `ci.yml` — install, typecheck, unit tests, build
+- Dependabot — weekly npm + GitHub Actions updates
 
-## Can I connect a custom domain to my Lovable project?
+Repo secrets to enable AI lanes (org-shared where possible):
 
-Yes, you can!
+- `OPENROUTER_API_KEY`
+- `JULES_API_KEY` (optional)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Monetization path (fleet research note)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+| Path | Notes | Confidence |
+| --- | --- | --- |
+| Freemium SaaS | Free residency/income tracker; paid multi-year export, CPA handoff packs | medium |
+| Affiliate | Cross-border banking, nomad insurance, e-residency prep (disclosure required) | medium |
+| B2B white-label | Remote-first employers / EOR partners embedding day-count dashboards | low |
 
----
+SEO / marketing keywords: `digital nomad tax`, `183 day rule tracker`, `expat tax residency`, `multi currency income tracker`, `NHR Portugal calculator`.
 
-## Test
+## Docs
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| App | ✅ Ready | Via Lovable |
-| Build | ✅ Ready | Via Lovable |
+- [OVERVIEW.md](./OVERVIEW.md) — product architecture and data model
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — branch / PR / commit conventions
+- [AGENTS.md](./AGENTS.md) — instructions for coding agents
 
-**Production:** https://nomad-navigator.vercel.app or custom domain
+## License
+
+See [LICENSE](./LICENSE).
