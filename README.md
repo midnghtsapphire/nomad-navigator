@@ -1,5 +1,9 @@
 # Nomad Navigator
 
+
+<!-- AUTO-PACKAGE-BADGES:START -->
+
+<!-- AUTO-PACKAGE-BADGES:END -->
 **Digital nomad tax clarity** — track multi-currency income, residency days, and simplified tax scenarios so location-independent professionals can see trade-offs before they move.
 
 > Educational estimates only. This app is **not** tax, legal, or financial advice. Always verify with a qualified professional and current local law.
