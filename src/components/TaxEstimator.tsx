@@ -3,8 +3,14 @@ import { Calculator, ChevronRight, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  buildTaxScenarios,
+  convertIncomeToUsd,
+  formatUsd,
+  type TaxScenario as PureTaxScenario,
+} from "@/lib/tax";
 
-type TaxScenario = {
+type TaxScenarioView = {
   country: string;
   flag: string;
   regime: string;
@@ -14,115 +20,57 @@ type TaxScenario = {
   highlight: boolean;
 };
 
-// Tax regime configurations with rates
-const taxRegimes: Record<string, { regime: string; rate: number; flag: string }> = {
-  PT: { regime: "NHR Regime", rate: 0.20, flag: "🇵🇹" },
-  ES: { regime: "Beckham Law", rate: 0.24, flag: "🇪🇸" },
-  AE: { regime: "Tax Free", rate: 0, flag: "🇦🇪" },
-  SG: { regime: "Territorial Tax", rate: 0.22, flag: "🇸🇬" },
-  MT: { regime: "Global Residence", rate: 0.15, flag: "🇲🇹" },
-  CY: { regime: "Non-Dom Regime", rate: 0.125, flag: "🇨🇾" },
-};
-
-const countryNames: Record<string, string> = {
-  PT: "Portugal",
-  ES: "Spain",
-  AE: "United Arab Emirates",
-  SG: "Singapore",
-  MT: "Malta",
-  CY: "Cyprus",
-};
-
-// US federal tax brackets (simplified)
-const calculateUSTax = (income: number): number => {
-  if (income <= 11000) return income * 0.10;
-  if (income <= 44725) return 1100 + (income - 11000) * 0.12;
-  if (income <= 95375) return 5147 + (income - 44725) * 0.22;
-  if (income <= 183000) return 16290 + (income - 95375) * 0.24;
-  if (income <= 231250) return 37104 + (income - 183000) * 0.32;
-  return 52832 + (income - 231250) * 0.35;
-};
+function toView(s: PureTaxScenario): TaxScenarioView {
+  return {
+    country: s.country,
+    flag: s.flag,
+    regime: s.regime,
+    estimatedTax: formatUsd(s.estimatedTax),
+    effectiveRate: `${s.effectiveRate.toFixed(1)}%`,
+    savings: formatUsd(s.savingsVsUs),
+    highlight: s.highlight,
+  };
+}
 
 const TaxEstimator = () => {
   const { user } = useAuth();
   const [totalIncome, setTotalIncome] = useState(0);
   const [residencyDays, setResidencyDays] = useState<Record<string, number>>({});
-  const [scenarios, setScenarios] = useState<TaxScenario[]>([]);
+  const [scenarios, setScenarios] = useState<TaxScenarioView[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
-      fetchData();
+      void fetchData();
     }
   }, [user]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch income sources
       const { data: incomeData } = await supabase
         .from("income_sources")
         .select("amount, currency");
 
-      // Fetch countries for residency
       const { data: countryData } = await supabase
         .from("countries")
         .select("code, days_spent");
 
-      // Calculate total income (convert to USD roughly)
-      const currencyRates: Record<string, number> = { USD: 1, EUR: 1.08, GBP: 1.27 };
-      const income = (incomeData || []).reduce((sum, src) => {
-        const rate = currencyRates[src.currency] || 1;
-        return sum + Number(src.amount) * rate;
-      }, 0);
+      const income = convertIncomeToUsd(incomeData || []);
       setTotalIncome(income);
 
-      // Map residency days by country code
       const days: Record<string, number> = {};
       (countryData || []).forEach((c) => {
         days[c.code] = c.days_spent;
       });
       setResidencyDays(days);
 
-      // Generate tax scenarios
-      generateScenarios(income);
+      setScenarios(buildTaxScenarios(income).map(toView));
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateScenarios = (income: number) => {
-    if (income === 0) {
-      setScenarios([]);
-      return;
-    }
-
-    const usTax = calculateUSTax(income);
-    
-    const scenarioList: TaxScenario[] = Object.entries(taxRegimes)
-      .map(([code, config]) => {
-        const estimatedTax = income * config.rate;
-        const effectiveRate = config.rate * 100;
-        const savings = usTax - estimatedTax;
-
-        return {
-          country: countryNames[code] || code,
-          flag: config.flag,
-          regime: config.regime,
-          estimatedTax: `$${estimatedTax.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-          effectiveRate: `${effectiveRate.toFixed(1)}%`,
-          savings: `$${savings.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-          highlight: false,
-          rawSavings: savings,
-        };
-      })
-      .sort((a, b) => (b as any).rawSavings - (a as any).rawSavings)
-      .slice(0, 3)
-      .map((s, idx) => ({ ...s, highlight: idx === 0 }));
-
-    setScenarios(scenarioList);
   };
 
   if (!user) {
@@ -145,13 +93,13 @@ const TaxEstimator = () => {
           <div>
             <h3 className="font-semibold text-foreground">Tax Optimization</h3>
             <p className="text-sm text-muted-foreground">
-              {totalIncome > 0 
-                ? `Based on $${totalIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })} annual income`
+              {totalIncome > 0
+                ? `Based on ${formatUsd(totalIncome)} annual income`
                 : "Add income sources to see estimates"}
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" className="text-primary" onClick={fetchData} disabled={loading}>
+        <Button variant="ghost" size="sm" className="text-primary" onClick={() => void fetchData()} disabled={loading}>
           {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Run Analysis"}
           {!loading && <ChevronRight className="w-4 h-4 ml-1" />}
         </Button>
@@ -164,11 +112,11 @@ const TaxEstimator = () => {
       ) : (
         <div className="space-y-3">
           {scenarios.map((scenario) => (
-            <div 
+            <div
               key={scenario.country}
               className={`relative p-4 rounded-xl transition-all duration-300 hover:scale-[1.01] cursor-pointer ${
-                scenario.highlight 
-                  ? "bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30" 
+                scenario.highlight
+                  ? "bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30"
                   : "bg-secondary/50 hover:bg-secondary"
               }`}
             >
@@ -178,7 +126,7 @@ const TaxEstimator = () => {
                   Recommended
                 </div>
               )}
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{scenario.flag}</span>
@@ -187,13 +135,13 @@ const TaxEstimator = () => {
                     <p className="text-sm text-muted-foreground">{scenario.regime}</p>
                   </div>
                 </div>
-                
+
                 <div className="text-right">
                   <p className="font-bold text-lg text-foreground">{scenario.estimatedTax}</p>
                   <p className="text-sm text-muted-foreground">{scenario.effectiveRate} effective</p>
                 </div>
               </div>
-              
+
               <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Potential savings vs. US tax</span>
                 <span className="text-sm font-semibold text-primary">{scenario.savings}</span>
@@ -209,7 +157,7 @@ const TaxEstimator = () => {
           <span className="text-sm font-medium text-foreground">Pro Tip</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          {Object.keys(residencyDays).length > 0 
+          {Object.keys(residencyDays).length > 0
             ? `You're tracking ${Object.keys(residencyDays).length} countries. Ensure you stay under 183 days to avoid tax residency issues.`
             : "Track your residency days in different countries to optimize your tax situation legally."}
         </p>
