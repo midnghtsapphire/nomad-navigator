@@ -31,7 +31,7 @@ jobs:
 
       - name: Jules PR Review
         if: ${{ env.JULES_API_KEY != '' && env.JULES_API_KEY != null }}
-        uses: sanjay3290/jules-pr-reviewer@v1.0.0
+        uses: sanjay3290/jules-pr-reviewer@v1.0.2
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
